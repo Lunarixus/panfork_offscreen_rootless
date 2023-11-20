@@ -78,6 +78,15 @@ const struct panfrost_model panfrost_model_list[] = {
 #undef HAS_ANISO
 #undef MODEL
 
+const struct panfrost_model panfrost_unknown_model = {
+   .gpu_id = 0,
+   .name = "Unknowm Mali device (Panfrost)",
+   .performance_counters = "AAAA",
+   .min_rev_anisotropic = HAS_ANISO,
+   .tilebuffer_size = 16384,
+   .quirks = {},
+}
+
 /*
  * Look up a supported model by its GPU ID, or return NULL if the model is not
  * supported at this time.
@@ -90,7 +99,54 @@ panfrost_get_model(uint32_t gpu_id)
          return &panfrost_model_list[i];
    }
 
-   return NULL;
+   return &panfrost_unknown_model;
+}
+
+/* Abstraction over the raw drm_panfrost_get_param ioctl for fetching
+ * information about devices */
+
+static __u64
+panfrost_query_raw(
+                struct panfrost_device *dev,
+                enum drm_panfrost_param param,
+                bool required,
+                unsigned default_value)
+{
+        if (dev->kbase) {
+                uint64_t value;
+                bool ret = dev->mali.get_pan_gpuprop(&dev->mali, param, &value);
+                if (ret) {
+                        return value;
+                } else {
+                        assert(!required);
+                        return default_value;
+                }
+        }
+
+        struct drm_panfrost_get_param get_param = {0,};
+        ASSERTED int ret;
+
+        get_param.param = param;
+        ret = drmIoctl(dev->fd, DRM_IOCTL_PANFROST_GET_PARAM, &get_param);
+
+        if (ret) {
+                assert(!required);
+                return default_value;
+        }
+
+        return get_param.value;
+}
+
+static unsigned
+panfrost_query_gpu_version(struct panfrost_device *dev)
+{
+        return panfrost_query_raw(dev, DRM_PANFROST_PARAM_GPU_PROD_ID, true, 0);
+}
+
+static unsigned
+panfrost_query_gpu_revision(struct panfrost_device *dev)
+{
+        return panfrost_query_raw(dev, DRM_PANFROST_PARAM_GPU_REVISION, true, 0);
 }
 
 unsigned
