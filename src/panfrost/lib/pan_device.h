@@ -127,6 +127,10 @@ struct panfrost_model {
 };
 
 struct panfrost_device {
+   int fd;
+
+   bool kbase;
+
    /* For ralloc */
    void *memctx;
 
@@ -221,6 +225,8 @@ struct panfrost_device {
     * unconditionally on Bifrost, and useful for sharing with Midgard */
 
    struct panfrost_bo *sample_positions;
+
+   struct kbase_ mali;
 };
 
 static inline int
