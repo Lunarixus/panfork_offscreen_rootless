@@ -143,8 +143,6 @@ os_get_option(const char *name)
 
 #else
 
-=======
->>>>>>> f83c413675d (Add forgotten changes)
 const char *
 os_get_option(const char *name)
 {
